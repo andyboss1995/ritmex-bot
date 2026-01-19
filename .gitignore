@@ -1,0 +1,38 @@
+
+_.log
+.cache
+.DS_Store
+.env
+.env.development.local
+.env.grvt
+.env.local
+.env.nado
+.env.production.local
+.env.standx
+.env.hedging
+.env.test.local
+.eslintcache
+.idea
+.tmp
+.tmp/*.env.nado
+*.lcov
+*.tgz
+*.tar.gz
+*.zip
+*.rar
+*.tsbuildinfo
+# caches
+# code coverage
+# dependencies (bun install)
+# dotenv environment variable files
+# Finder (MacOS) folder config
+# IntelliJ based IDEs
+# logs
+# output
+coverage
+data/*
+dist
+logs
+node_modules
+out
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json

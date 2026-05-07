@@ -163,6 +163,11 @@ export class FutuTradeBridge implements OrderRouter {
     return { orderId: r.order_id, filledPrice: r.filled_avg_price };
   }
 
+  async submitMarketSell(symbol: string, shares: number): Promise<{ orderId: string; filledPrice: number }> {
+    const r = await this.call<{ order_id: string; status: string; filled_avg_price: number }>("place_market_sell", { symbol, shares });
+    return { orderId: r.order_id, filledPrice: r.filled_avg_price };
+  }
+
   async submitStopLoss(symbol: string, shares: number, stopPrice: number): Promise<{ orderId: string }> {
     const r = await this.call<{ order_id: string }>("place_stop_sell", { symbol, shares, stop: stopPrice });
     return { orderId: r.order_id };

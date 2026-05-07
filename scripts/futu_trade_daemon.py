@@ -164,6 +164,23 @@ def main() -> int:
                             "status": str(row.get("order_status")),
                             "filled_avg_price": float(row.get("dealt_avg_price", 0) or 0),
                         })
+                elif method == "place_market_sell":
+                    symbol = params["symbol"]
+                    shares = int(params["shares"])
+                    ret, data = trd.place_order(
+                        price=0.0, qty=shares, code=symbol,
+                        trd_side=TrdSide.SELL, order_type=OrderType.MARKET,
+                        trd_env=trd_env,
+                    )
+                    if ret != RET_OK:
+                        _err(rid, str(data))
+                    else:
+                        row = data.iloc[0].to_dict()
+                        _ok(rid, {
+                            "order_id": str(row.get("order_id")),
+                            "status": str(row.get("order_status")),
+                            "filled_avg_price": float(row.get("dealt_avg_price", 0) or 0),
+                        })
                 elif method == "place_stop_sell":
                     symbol = params["symbol"]
                     shares = int(params["shares"])

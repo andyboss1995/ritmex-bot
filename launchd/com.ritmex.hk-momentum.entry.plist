@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  HK 策略入场调度: 工作日 09:30 HKT 跑 entry 阶段.
+  安装:
+    cp launchd/com.ritmex.hk-momentum.entry.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.ritmex.hk-momentum.entry.plist
+  卸载:
+    launchctl unload ~/Library/LaunchAgents/com.ritmex.hk-momentum.entry.plist
+
+  注意: REPO_PATH 占位符必须替换为绝对路径 (例如 /Users/yourname/Desktop/ritmex-bot).
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ritmex.hk-momentum.entry</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>REPO_PATH/scripts/run_daily.sh</string>
+    <string>entry</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>REPO_PATH</string>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>REPO_PATH/logs/launchd-entry.out</string>
+  <key>StandardErrorPath</key>
+  <string>REPO_PATH/logs/launchd-entry.err</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

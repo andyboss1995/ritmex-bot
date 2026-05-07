@@ -1,0 +1,120 @@
+================================================================
+HK Momentum + Policy 策略 — 项目状态
+最后更新: 2026-05-07
+================================================================
+
+# 一句话目标
+港股自营盘: 在 Top 200 流动股 universe 上, 用"量价突破 + 政策催化关键词"
+组合信号选股, 1-3 天持有, 严格 ATR 止损 + 板块上限 + 组合熔断.
+
+# 当前阶段
+✅ 回测完成 (6 个月真实数据)
+✅ Walk-forward 验证 (IS/OOS 都正回报)
+✅ 实时数据管线 (OpenD + AKShare 4 源新闻)
+✅ Python ↔ TS bridge 调通 (SIMULATE 账户已可下单)
+✅ 自动化每日运行 (launchd 09:30 entry / 16:30 eod)
+🔜 等用户跑 SIMULATE 2-4 周看真实表现
+🔜 完成风控确认后切 REAL 实盘
+
+# 推荐配置 (Walk-forward 验证后的"保守组")
+- maxPositions: 5
+- perTradeRiskPct: 1.0%
+- stopLossMode: ATR (1.0× ATR), takeProfit: 2.0× ATR
+- volumeMultiplier: 1.5×, breakout 20 日 high + 20 日 SMA
+- minDailyTurnoverHkd: 50,000,000
+- intradayDrawdownHaltPct: 15% (组合实时熔断)
+- maxPositionsPerSector: 2
+- 催化模式: "strong" (KeywordPolicyAnalyst 关键词命中)
+
+# 历史回测数据
+[6 个月真实数据 2025-11-11 → 2026-05-07]
+保守组 IS  (4.7 月): 16 笔, +8.46%, wr 50%, payoff 3.14, maxDD 8%, Sharpe 1.0
+保守组 OOS (1.2 月): 5 笔,  +4.69%, wr 80%, payoff 1.20, maxDD 4%
+对照: 纯技术 (无催化): 21 笔, -6.26% IS  ← 证明催化是必要条件
+
+期望 2 周回报: 中位 +1.0% ~ +1.5%, 1σ 区间 -2% ~ +4%
+
+# 关键文件
+src/strategy/hk-momentum-policy/
+  ├── engine.ts                   # 主引擎 (含板块约束 + ATR 止损)
+  ├── backtest.ts                 # 回测引擎 (含 portfolio 15% 实时熔断)
+  ├── signal-engine.ts            # 量价突破信号 (附带 ATR)
+  ├── policy-agent.ts             # KeywordPolicyAnalyst + DefaultDecisionExecutor
+  ├── risk-manager.ts             # 单日/总账户风控
+  ├── config.ts                   # defaultConfig
+  ├── types.ts                    # 数据结构 (含 atr, openSectorCounts)
+  ├── adapters/
+  │   ├── futu-openapi.ts         # 接口定义 (FutuClient, MarketDataSource, OrderRouter)
+  │   ├── futu-bridge.ts          # ★ Python 子进程桥, 实现 OrderRouter
+  │   └── akshare-news.ts         # ★ NewsGrabber, 读 Python 写的 cache
+  └── README.md
+
+scripts/
+  ├── futu_pull_universe.py       # 拉 Top 200 universe (一次性, 已生成 data/hk_universe_kline.json)
+  ├── futu_pull_kline.py          # 单股 K 线工具
+  ├── futu_pull_snapshot.py       # ★ 每天拉当前快照 → data/hk_snapshot.json
+  ├── futu_trade_daemon.py        # ★ JSON-RPC daemon: place_order / get_positions / unlock
+  ├── akshare_pull_news.py        # 拉历史新闻 (已生成 data/hk_news.json)
+  ├── akshare_pull_news_realtime.py # ★ 多源实时新闻聚合 + sector 反查
+  ├── hk-policy-with-news.ts      # 三模式催化对比
+  ├── hk-policy-grid-v2.ts        # 144 组参数扫描
+  ├── hk-policy-walk-forward.ts   # IS/OOS 验证
+  ├── hk-policy-dry-run.ts        # 不下单, 只打印建议
+  ├── hk-policy-bridge-check.ts   # 验证 daemon 连通性
+  ├── hk-policy-live.ts           # ★ SIMULATE/REAL 实盘下单 (--auto 跳过 confirm)
+  └── run_daily.sh                # ★ 每日自动化包装脚本
+
+launchd/
+  ├── com.ritmex.hk-momentum.entry.plist  # 09:30 入场
+  ├── com.ritmex.hk-momentum.eod.plist    # 16:30 EOD 复盘
+  └── install.sh                          # 安装脚本
+
+# 数据文件 (gitignore, 需在每台机器重新拉)
+data/hk_universe_kline.json     # 185 只 × 60-120 日 K 线 (~22 MB)
+data/hk_news.json               # 1842 条 6 月历史新闻
+data/hk_news_live.json          # 实时聚合, 自动刷新 (15 分钟过期)
+data/hk_snapshot.json           # 实时快照, 每天 09:30 重拉
+
+# 在新机器上的 setup checklist
+1. git clone <repo>; cd ritmex-bot
+2. bun install
+3. python3 -m pip install futu-api akshare pandas
+4. 启动富途 OpenD (默认监听 127.0.0.1:11111)
+   - 富途客户端 → 设置 → API 设置 → 启动 OpenD
+5. cp .env.hk-momentum.example .env  并填写 (REAL 模式才需要 FUTU_UNLOCK_PWD_MD5)
+6. 第一次拉历史数据 (20-30 分钟):
+   python3 scripts/futu_pull_universe.py     # 生成 data/hk_universe_kline.json
+   python3 scripts/akshare_pull_news.py      # 生成 data/hk_news.json (慢)
+7. 每日数据 + 跑策略 (一次性手动验证):
+   python3 scripts/futu_pull_snapshot.py
+   python3 scripts/akshare_pull_news_realtime.py
+   bun run scripts/hk-policy-dry-run.ts      # 只看建议, 不下单
+   bun run scripts/hk-policy-live.ts         # 会等 yes 确认
+8. 安装 launchd 自动调度 (可选):
+   bash launchd/install.sh
+9. 验证测试: bun x vitest run src/strategy/hk-momentum-policy
+
+# 已知限制 (重要!)
+1. AKShare stock_news_em 历史只有 ~6 个月. 想要 18 月完整周期回测需要 Tushare 5000 积分 / 财联社 API
+2. 6 个月数据未覆盖港股熊市. 实盘需额外加"账户月回撤 -10% 自动停手 1-2 周"的人工规则
+3. 回测未计入费用 (印花税 0.13% + 证监会费 + 佣金 + 滑点 ≈ 双边 0.2-0.3%)
+4. OOS 样本仅 5 笔 / 1 个月, 实盘前 1-3 月偏离回测 ±50% 是正常波动, 不要因前几笔亏损改参数
+5. 模拟账户可能保留历史持仓，切换策略前先清理，避免占满 maxPositions.
+   想看新策略效果应先在富途客户端手动平掉
+
+# 调试常用命令
+- 看今日推荐:           bun run scripts/hk-policy-dry-run.ts
+- 看账户/持仓:          bun run scripts/hk-policy-bridge-check.ts
+- 跑全部测试:           bun x vitest run src/strategy/hk-momentum-policy
+- 回测重跑:             bun run scripts/hk-policy-walk-forward.ts
+- 看自动化日志:         tail -f logs/daily-$(date +%Y-%m-%d)-entry.log
+- launchd 任务列表:     launchctl list | grep ritmex
+- 手动触发 entry:       bash scripts/run_daily.sh entry
+- 手动触发 eod:         bash scripts/run_daily.sh eod
+
+# 下一步路线
+[本周] SIMULATE 跑 5-10 个交易日, 收集真实下单数据 (滑点/成交率)
+[2 周后] 看回报是否落在 -2% ~ +4% 区间; 如否, 检查日志找偏差源
+[1 月后] 决定是否切 REAL: 如果 SIMULATE Sharpe > 0.5, 上小额资金试水
+[3 月后] 如果稳定, 加叠财联社快讯 API + 上 18 月回测验证
+================================================================

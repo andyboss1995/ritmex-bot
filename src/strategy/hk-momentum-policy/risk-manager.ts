@@ -10,7 +10,7 @@ export interface RiskGate {
 export class RiskManagerEntity {
   constructor(private readonly config: HkMomentumPolicyConfig) {}
 
-  evaluate(account: AccountStateEntity, positions: PositionEntity[], now: string): RiskGate {
+  evaluate(account: AccountStateEntity, positions: PositionEntity[], now: string, maxPositionsOverride?: number): RiskGate {
     if (account.haltedUntil && now < account.haltedUntil) {
       return { canOpen: false, reason: `回撤熔断中, 至 ${account.haltedUntil}`, remainingRiskBudgetHkd: 0 };
     }
@@ -27,7 +27,8 @@ export class RiskManagerEntity {
         remainingRiskBudgetHkd: 0,
       };
     }
-    if (positions.length >= this.config.maxPositions) {
+    const maxPos = maxPositionsOverride ?? this.config.maxPositions;
+    if (positions.length >= maxPos) {
       return { canOpen: false, reason: "已达最大持仓数", remainingRiskBudgetHkd: 0 };
     }
     const dailyCap = account.totalEquityHkd * this.config.dailyRiskCapPct;

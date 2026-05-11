@@ -111,7 +111,18 @@ export class DefaultDecisionExecutor implements DecisionExecutor {
       if (decisions.length >= slotsLeft) break;
       const catalysts = symbolCatalysts.get(sig.symbol) ?? [];
       const hasStrong = catalysts.some((c) => c.strength === "strong");
-      if (!hasStrong) continue;
+
+      let entryMode: "catalyst" | "noCatalyst" | null = null;
+      if (hasStrong) {
+        entryMode = "catalyst";
+      } else if (context.config.allowNoCatalystEntry) {
+        const volOk = sig.volumeRatio >= context.config.noCatalystVolumeMultiplier;
+        const breakoutOk = context.config.noCatalystBreakoutMustBeBoth
+          ? sig.breakoutType === "both"
+          : true;
+        if (volOk && breakoutOk) entryMode = "noCatalyst";
+      }
+      if (!entryMode) continue;
       const sectors = context.symbolSectors?.get(sig.symbol) ?? [];
       const cap = context.config.maxPositionsPerSector;
       if (cap > 0 && sectors.some((sec) => (sectorCounts.get(sec) ?? 0) >= cap)) continue;
@@ -119,10 +130,9 @@ export class DefaultDecisionExecutor implements DecisionExecutor {
       const { stopLoss, takeProfit } = resolveStops(sig, context.config);
       const riskPerShare = sig.lastPrice - stopLoss;
       if (riskPerShare <= 0) continue;
-      const riskBudget = Math.min(
-        context.totalEquityHkd * context.config.perTradeRiskPct,
-        context.riskBudgetHkd
-      );
+      const perTradeRisk = context.totalEquityHkd * context.config.perTradeRiskPct;
+      const riskMultiplier = entryMode === "noCatalyst" ? context.config.noCatalystRiskMultiplier : 1;
+      const riskBudget = Math.min(perTradeRisk * riskMultiplier, context.riskBudgetHkd);
       if (riskBudget <= 0) continue;
       const rawShares = riskBudget / riskPerShare;
       const shares = Math.max(0, Math.floor(rawShares / 100) * 100);
@@ -138,10 +148,13 @@ export class DefaultDecisionExecutor implements DecisionExecutor {
         trailingMa: context.config.trailingMa,
         positionSizeShares: shares,
         positionSizeNotional: shares * sig.lastPrice,
-        reason: `量比 ${sig.volumeRatio.toFixed(2)} 突破${sig.breakoutType}, RSI ${sig.rsi.toFixed(1)}, MACD柱 ${sig.macdHist.toFixed(3)}; 强催化: ${catalysts
-          .filter((c) => c.strength === "strong")
-          .map((c) => c.reasoning)
-          .join(" | ")}`,
+        reason:
+          entryMode === "catalyst"
+            ? `量比 ${sig.volumeRatio.toFixed(2)} 突破${sig.breakoutType}, RSI ${sig.rsi.toFixed(1)}, MACD柱 ${sig.macdHist.toFixed(3)}; 强催化: ${catalysts
+                .filter((c) => c.strength === "strong")
+                .map((c) => c.reasoning)
+                .join(" | ")}`
+            : `无催化-量价强势入场 (风险系数x${riskMultiplier.toFixed(2)}): 量比 ${sig.volumeRatio.toFixed(2)} 突破${sig.breakoutType}, RSI ${sig.rsi.toFixed(1)}, MACD柱 ${sig.macdHist.toFixed(3)}`,
         catalysts,
         signal: sig,
       });

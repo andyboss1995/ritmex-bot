@@ -18,6 +18,11 @@ from datetime import datetime, timedelta
 
 import akshare as ak
 
+try:
+    import requests  # type: ignore
+except Exception:  # pragma: no cover
+    requests = None  # type: ignore
+
 
 SECTOR_KEYWORDS = {
     "AI": ["AI", "人工智能", "大模型", "算力", "GPT", "DeepSeek"],
@@ -137,6 +142,83 @@ def fetch_global_ths() -> list[dict]:
     return rows
 
 
+def fetch_tushare_major_news(lookback_hours: int) -> list[dict]:
+    """Tushare 中转站 major_news（重大财经新闻聚合）.
+    - token 从环境 TUSHARE_TOKEN 读取，未设置则跳过.
+    - 限速: 翻页之间 sleep 1.5s; 单次请求超时 15s; 单源最多取 5 页 (≈ 4000 条).
+    - 入参 pub_time 为北京时间 'YYYY-MM-DD HH:MM:SS'.
+    """
+    if requests is None:
+        return []
+    token = os.environ.get("TUSHARE_TOKEN", "").strip()
+    if not token:
+        return []
+    url = os.environ.get("TUSHARE_RELAY_URL", "http://tsy.xiaodefa.cn").rstrip("/")
+    end_dt = datetime.now()
+    start_dt = end_dt - timedelta(hours=lookback_hours)
+    fmt = "%Y-%m-%d %H:%M:%S"
+    rows: list[dict] = []
+    seen_keys: set[tuple[str, str]] = set()
+    end_str = end_dt.strftime(fmt)
+    # 限速保护: 默认仅 2 页 (≈ 1600 条), 间隔 3s, 避免触发 6min 冷却
+    max_pages = int(os.environ.get("TUSHARE_MAX_PAGES", "2"))
+    page_sleep = float(os.environ.get("TUSHARE_PAGE_SLEEP", "3"))
+    for page in range(max_pages):
+        try:
+            payload = {
+                "api_name": "major_news",
+                "token": token,
+                "params": {"start_date": start_dt.strftime(fmt), "end_date": end_str},
+                "fields": "title,pub_time,src,url",
+            }
+            # 绕过系统代理 (避免本地 http_proxy 干扰中转站调用)
+            session = requests.Session()
+            session.trust_env = False
+            r = session.post(url, json=payload, timeout=20,
+                             headers={"Accept-Encoding": "gzip"},
+                             proxies={"http": "", "https": ""})
+            j = r.json()
+        except Exception as e:
+            print(f"  tushare major_news 请求失败: {e}")
+            break
+        if j.get("code") != 0:
+            print(f"  tushare major_news code={j.get('code')} msg={j.get('msg')}")
+            break
+        data = j.get("data") or {}
+        items = data.get("items") or []
+        if not items:
+            break
+        for it in items:
+            title = (it[0] or "").strip()
+            pub_time = (it[1] or "").strip()  # 'YYYY-MM-DD HH:MM:SS'
+            src = (it[2] or "").strip() or "tushare"
+            link = (it[3] or "").strip()
+            if not title or not pub_time:
+                continue
+            key = (title[:40], pub_time[:16])
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            iso = pub_time.replace(" ", "T") + "+08:00"
+            rows.append({
+                "title": title, "content": link or title,
+                "publishedAt": iso, "source": f"tushare/{src}",
+            })
+        if not data.get("has_more"):
+            break
+        # 翻页: 用最早一条的 pub_time 作为新的 end_date (减 1 秒)
+        try:
+            earliest = min(items, key=lambda x: x[1])
+            new_end_dt = datetime.strptime(earliest[1], fmt) - timedelta(seconds=1)
+        except Exception:
+            break
+        if new_end_dt <= start_dt:
+            break
+        end_str = new_end_dt.strftime(fmt)
+        time.sleep(page_sleep)  # 限速 (默认 3s, 避开 6min 冷却)
+    return rows
+
+
 def fetch_global_sina() -> list[dict]:
     try:
         df = ak.stock_info_global_sina()
@@ -194,6 +276,10 @@ def main() -> int:
         rows = fn()
         print(f"  {label}: {len(rows)}")
         all_raw.extend(rows)
+    # Tushare 中转: TUSHARE_TOKEN 设置后启用
+    ts_rows = fetch_tushare_major_news(args.lookback_hours)
+    print(f"  tushare/major_news: {len(ts_rows)}")
+    all_raw.extend(ts_rows)
 
     # 时间过滤
     cutoff = datetime.now().astimezone() - timedelta(hours=args.lookback_hours)

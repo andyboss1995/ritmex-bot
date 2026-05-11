@@ -61,7 +61,28 @@ export class HkMomentumPolicyEngineEntity {
     const news = await this.deps.newsGrabber.fetch(input.universe, input.lookbackHours ?? 36);
     const assessments = await this.analyst.evaluate(news);
 
-    const gate = this.risk.evaluate(input.account, input.positions, now);
+    // Market regime filter: if requireMarketAboveSma is enabled and broadMarketSymbol provided,
+    // reduce or halt positions when market is below SMA.
+    let regimeOk = true;
+    let maxSlotsOverride: number | undefined;
+    if (this.config.requireMarketAboveSma && this.config.broadMarketSymbol) {
+      const mkt = snapshots.find((s) => s.symbol === this.config.broadMarketSymbol);
+      if (mkt && mkt.bars.length >= this.config.marketSmaPeriod) {
+        const closes = mkt.bars.map((b) => b.close);
+        const recent = closes.slice(-this.config.marketSmaPeriod);
+        const ma = recent.reduce((a, b) => a + b, 0) / this.config.marketSmaPeriod;
+        regimeOk = mkt.lastPrice >= ma;
+        if (this.config.bullMaxPositions && regimeOk) maxSlotsOverride = this.config.bullMaxPositions;
+        if (this.config.bearMaxPositions && !regimeOk) maxSlotsOverride = this.config.bearMaxPositions;
+      }
+    }
+
+    const gate = this.risk.evaluate(
+      maxSlotsOverride ? { ...input.account } : input.account,
+      input.positions,
+      now,
+      maxSlotsOverride
+    );
     if (!gate.canOpen) {
       return { signals, news, assessments, decisions: [], riskGateReason: gate.reason };
     }
@@ -76,7 +97,7 @@ export class HkMomentumPolicyEngineEntity {
     const decisions = await this.executor.decide(signals, assessments, {
       totalEquityHkd: input.account.totalEquityHkd,
       openSymbols: input.positions.map((p) => p.symbol),
-      config: this.config,
+      config: maxSlotsOverride ? { ...this.config, maxPositions: maxSlotsOverride } : this.config,
       riskBudgetHkd: gate.remainingRiskBudgetHkd,
       symbolSectors: this.deps.symbolSectors,
       openSectorCounts,

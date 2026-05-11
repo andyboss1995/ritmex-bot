@@ -27,6 +27,15 @@ export interface HkMomentumPolicyConfig {
   atrPeriod: number;
   atrStopMultiplier: number;
   atrTakeProfitMultiplier: number;
+  allowNoCatalystEntry: boolean;
+  noCatalystVolumeMultiplier: number;
+  noCatalystBreakoutMustBeBoth: boolean;
+  noCatalystRiskMultiplier: number;
+  requireMarketAboveSma: boolean;
+  marketSmaPeriod: number;
+  broadMarketSymbol?: string;
+  bullMaxPositions?: number;
+  bearMaxPositions?: number;
 }
 
 export const defaultConfig: HkMomentumPolicyConfig = {
@@ -58,4 +67,39 @@ export const defaultConfig: HkMomentumPolicyConfig = {
   atrPeriod: 14,
   atrStopMultiplier: 1.2,
   atrTakeProfitMultiplier: 3.0,
+  allowNoCatalystEntry: false,
+  noCatalystVolumeMultiplier: 2.0,
+  noCatalystBreakoutMustBeBoth: true,
+  noCatalystRiskMultiplier: 0.5,
+  requireMarketAboveSma: false,
+  marketSmaPeriod: 20,
+  broadMarketSymbol: undefined,
+  bullMaxPositions: undefined,
+  bearMaxPositions: 1,
+};
+
+export const aggressiveConfig: HkMomentumPolicyConfig = {
+  ...defaultConfig,
+  volumeMultiplier: 2.0,
+  maxPositions: 4,
+  perTradeRiskPct: 0.05,
+  dailyRiskCapPct: 0.08,
+  stopLossMode: "atr",
+  atrPeriod: 14,
+  atrStopMultiplier: 1.5,
+  atrTakeProfitMultiplier: 3.5,
+  trailingMa: 8,
+  drawdownHaltPct: 0.12,
+  intradayDrawdownHaltPct: 0.20,
+  intradayHaltCooldownDays: 3,
+  minDailyTurnoverHkd: 500_000_000,
+  entryTiming: "same_close",
+  allowNoCatalystEntry: true,
+  noCatalystVolumeMultiplier: 2.5,
+  noCatalystBreakoutMustBeBoth: true,
+  noCatalystRiskMultiplier: 0.6,
+  requireMarketAboveSma: true,
+  marketSmaPeriod: 20,
+  bullMaxPositions: 5,
+  bearMaxPositions: 1,
 };

@@ -146,7 +146,24 @@ export class BacktestEngineEntity {
       const news = input.newsByDate[date] ?? [];
       const assessments = await this.analyst.evaluate(news);
 
-      const gate = this.risk.evaluate(account, positions, isoOf(date));
+      // Market regime cap override
+    let maxSlotsOverride: number | undefined;
+    if (this.config.requireMarketAboveSma && this.config.broadMarketSymbol) {
+      const broad = seriesBySymbol.get(this.config.broadMarketSymbol);
+      if (broad) {
+        const idx = broad.bars.findIndex((b) => b.date === date);
+        if (idx >= this.config.marketSmaPeriod) {
+          const recent = broad.bars.slice(idx - this.config.marketSmaPeriod, idx).map((b) => b.close);
+          const ma = recent.reduce((a, b) => a + b, 0) / this.config.marketSmaPeriod;
+          const last = broad.bars[idx - 1]!.close;
+          const regimeOk = last >= ma;
+          if (this.config.bullMaxPositions && regimeOk) maxSlotsOverride = this.config.bullMaxPositions;
+          if (this.config.bearMaxPositions && !regimeOk) maxSlotsOverride = this.config.bearMaxPositions;
+        }
+      }
+    }
+
+    const gate = this.risk.evaluate(account, positions, isoOf(date));
       let decisions: TradeDecision[] = [];
       if (gate.canOpen) {
         const openSectorCounts = new Map<string, number>();
@@ -159,7 +176,7 @@ export class BacktestEngineEntity {
         decisions = await this.executor.decide(signals, assessments, {
           totalEquityHkd: account.totalEquityHkd,
           openSymbols: positions.map((p) => p.symbol),
-          config: this.config,
+          config: maxSlotsOverride ? { ...this.config, maxPositions: maxSlotsOverride } : this.config,
           riskBudgetHkd: gate.remainingRiskBudgetHkd,
           symbolSectors: input.symbolSectors,
           openSectorCounts,

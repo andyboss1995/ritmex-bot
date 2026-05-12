@@ -63,9 +63,13 @@ case "$PHASE" in
     "$PYTHON3" "$REPO_DIR/scripts/akshare_pull_news_realtime.py" --lookback-hours 24 --out "$REPO_DIR/data/hk_news_live.json" >>"$LOG_FILE" 2>&1 || {
       log "[ERROR] 新闻聚合失败"; exit 1;
     }
-    log "3/3 跑策略 (SIMULATE auto-confirm)..."
+    log "3/4 跑 hk-momentum-policy (SIMULATE auto-confirm)..."
     "$BUN" run "$REPO_DIR/scripts/hk-policy-live.ts" --auto >>"$LOG_FILE" 2>&1 || {
-      log "[ERROR] 策略运行失败 (exit=$?)"; exit 1;
+      log "[WARN] momentum-policy 失败 (exit=$?), 继续 leader-rider"
+    }
+    log "4/4 跑 hk-leader-rider (SIMULATE auto-confirm)..."
+    "$BUN" run "$REPO_DIR/scripts/hk-leader-live.ts" >>"$LOG_FILE" 2>&1 || {
+      log "[WARN] leader-rider 失败 (exit=$?)"
     }
     log "✅ entry 完成"
     ;;

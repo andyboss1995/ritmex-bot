@@ -1,6 +1,6 @@
 ================================================================
 HK Momentum + Policy 策略 — 项目状态
-最后更新: 2026-05-07
+最后更新: 2026-05-12
 ================================================================
 
 # 一句话目标
@@ -8,13 +8,21 @@ HK Momentum + Policy 策略 — 项目状态
 组合信号选股, 1-3 天持有, 严格 ATR 止损 + 板块上限 + 组合熔断.
 
 # 当前阶段
-✅ 回测完成 (6 个月真实数据)
-✅ Walk-forward 验证 (IS/OOS 都正回报)
-✅ 实时数据管线 (OpenD + AKShare 4 源新闻)
-✅ Python ↔ TS bridge 调通 (SIMULATE 账户已可下单)
-✅ 自动化每日运行 (launchd 09:30 entry / 16:30 eod)
-🔜 等用户跑 SIMULATE 2-4 周看真实表现
+✅ momentum-policy: 6 月真实回测 + Walk-forward + SIMULATE 联调 + launchd 自动化
+✅ leader-rider 子策略: 18 月回测 + 参数扫描 + 实盘脚本 + 接入 run_daily.sh
+✅ Python ↔ TS bridge (place_market_buy/sell, place_stop_sell, get_positions)
+✅ 一键平仓工具 hk-policy-flatten.ts (历史残留持仓已清理)
+🔜 等 SIMULATE 跑 2-4 周看真实表现 (双策略并行)
 🔜 完成风控确认后切 REAL 实盘
+
+# leader-rider 子策略 (新增)
+[18 月回测 2024-11-13 → 2026-05-07, 牛市样本]
+- 最佳参数: maxPos=3 + RS Top 30% + atrStop 2.5×, Sharpe 1.50, MaxDD 14.8%, Ret +50%
+- 平衡参数: maxPos=3 + risk 2% + RS 25% + atrStop 3, Sharpe 1.26, MaxDD 13.8%
+- 最稳参数 (推荐 20k 小账户): maxPos=2 + risk 2% + atrStop 3, Sharpe 0.79, MaxDD 7.7%
+- 诚实结论: 跑输 buy-hold (+50% vs +70%), 真正价值在熊市保护 (本数据未验证)
+- 与 momentum-policy 互补: 后者抓 1-3 天波段, leader-rider 抓 8-50 天趋势
+- 详细报告: docs/leader-rider-validation.md
 
 # 推荐配置 (Walk-forward 验证后的"保守组")
 - maxPositions: 5
@@ -61,8 +69,13 @@ scripts/
   ├── hk-policy-walk-forward.ts   # IS/OOS 验证
   ├── hk-policy-dry-run.ts        # 不下单, 只打印建议
   ├── hk-policy-bridge-check.ts   # 验证 daemon 连通性
-  ├── hk-policy-live.ts           # ★ SIMULATE/REAL 实盘下单 (--auto 跳过 confirm)
-  └── run_daily.sh                # ★ 每日自动化包装脚本
+  ├── hk-policy-live.ts           # ★ momentum-policy SIMULATE/REAL 实盘下单
+  ├── hk-policy-flatten.ts        # ★ 一键平掉所有港股仓位 (市价)
+  ├── hk-leader-scan.ts           # ★ leader-rider 当日候选扫描
+  ├── hk-leader-backtest.ts       # ★ leader-rider 18 月真实数据回测
+  ├── hk-leader-tune.ts           # ★ leader-rider 参数扫描器
+  ├── hk-leader-live.ts           # ★ leader-rider SIMULATE/REAL 实盘下单
+  └── run_daily.sh                # ★ 每日自动化包装脚本 (entry 跑 momentum-policy + leader-rider)
 
 launchd/
   ├── com.ritmex.hk-momentum.entry.plist  # 09:30 入场

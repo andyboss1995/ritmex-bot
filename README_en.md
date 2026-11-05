@@ -47,14 +47,14 @@ If you'd like to support this project and get fee discounts, please consider usi
 ## Quick Start
 ### One-line bootstrap (macOS / Linux / WSL)
 ```bash
-curl -fsSL https://github.com/discountry/ritmex-bot/raw/refs/heads/main/setup.sh | bash
+curl -fsSL https://github.com/andyboss1995/ritmex-bot/raw/refs/heads/main/setup.sh | bash
 ```
 The script installs Bun, project dependencies, collects Aster API credentials, generates `.env`, and launches the CLI. Prepare the relevant exchange API keys before running it.
 
 ### Manual installation
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/discountry/ritmex-bot.git
+   git clone https://github.com/andyboss1995/ritmex-bot.git
    cd ritmex-bot
    ```
    Alternatively, download the ZIP from GitHub and extract it manually.

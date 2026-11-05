@@ -67,8 +67,8 @@ ensure_repo() {
     return
   fi
 
-  local REPO_URL="https://github.com/discountry/ritmex-bot.git"
-  local TAR_URL="https://github.com/discountry/ritmex-bot/archive/refs/heads/main.tar.gz"
+  local REPO_URL="https://github.com/andyboss1995/ritmex-bot.git"
+  local TAR_URL="https://github.com/andyboss1995/ritmex-bot/archive/refs/heads/main.tar.gz"
   local TARGET_DIR="${RITMEX_DIR:-ritmex-bot}"
 
   if [ -d "$TARGET_DIR" ] && [ -f "$TARGET_DIR/package.json" ]; then

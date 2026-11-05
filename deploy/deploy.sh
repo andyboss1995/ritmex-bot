@@ -6,8 +6,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
 # Configuration
-VPS_IP="YOUR_VPS_IP"
-USER="root"
+VPS_IP="${VPS_IP:?set VPS_IP}"
+USER="${VPS_USER:-root}"
 # We exclude node_modules and .git to make upload fast
 echo "Compressing project files..."
 zip -r bots.zip . -x "node_modules/*" ".git/*" "deploy/*" "docs/*" "tests/*" ".DS_Store"
@@ -70,7 +70,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
-VPS_IP="YOUR_VPS_IP"
+VPS_IP="${VPS_IP:?set VPS_IP}"
 
 echo "Compressing..."
 zip -r bots.zip . -x "node_modules/*" ".git/*" "deploy/*" "docs/*" "tests/*" ".DS_Store" > /dev/null

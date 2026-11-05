@@ -10,7 +10,9 @@ from datetime import datetime, timedelta
 import tushare as ts
 
 
-TOKEN = os.environ.get("TUSHARE_TOKEN") or "YOUR_TUSHARE_TOKEN"
+TOKEN = os.environ.get("TUSHARE_TOKEN", "").strip()
+if not TOKEN:
+    sys.exit("TUSHARE_TOKEN is required")
 
 ts.set_token(TOKEN)
 pro = ts.pro_api()
@@ -33,7 +35,6 @@ probes = [
     ("hk_daily (港股日 K)",     lambda: pro.hk_daily(ts_code="00700.HK", start_date=(end-timedelta(days=30)).strftime(fmt_d), end_date=end.strftime(fmt_d))),
 ]
 
-print(f"Token: ...{TOKEN[-8:]}\n")
 ok = []
 fail = []
 for label, fn in probes:

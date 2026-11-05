@@ -18,4 +18,4 @@ echo "Maker Only: $GRID_MAKER_ONLY"
 mkdir -p logs
 
 # Run via Bun
-/Users/yourname/.bun/bin/bun run src/index.tsx --strategy $STRATEGY
+bun run src/index.tsx --strategy $STRATEGY

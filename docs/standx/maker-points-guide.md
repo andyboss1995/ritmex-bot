@@ -31,7 +31,7 @@ bun -v
 ## 第二步：下载项目并安装依赖
 
 ```bash
-git clone https://github.com/discountry/ritmex-bot.git
+git clone https://github.com/andyboss1995/ritmex-bot.git
 cd ritmex-bot
 bun install
 ```

@@ -51,14 +51,14 @@ A Bun-powered multi-exchange perpetuals workstation that ships an SMA30 trend en
 ## 快速上手
 ### 一键脚本（macOS / Linux / WSL）
 ```bash
-curl -fsSL https://github.com/discountry/ritmex-bot/raw/refs/heads/main/setup.sh | bash
+curl -fsSL https://github.com/andyboss1995/ritmex-bot/raw/refs/heads/main/setup.sh | bash
 ```
 脚本会安装 Bun、项目依赖，收集 Aster API 凭证，生成 `.env` 并启动 CLI。运行前请准备好对应交易所的 API Key/Secret。
 
 ### 手动安装
 1. **获取代码**
    ```bash
-   git clone https://github.com/discountry/ritmex-bot.git
+   git clone https://github.com/andyboss1995/ritmex-bot.git
    cd ritmex-bot
    ```
    不便使用 Git 时，可在仓库页面下载 ZIP 后手动解压。

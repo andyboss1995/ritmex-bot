@@ -19,12 +19,12 @@
 ## 1. 获取项目代码
 ### 方式 A：Git（推荐）
 ```bash
-git clone https://github.com/discountry/ritmex-bot.git
+git clone https://github.com/andyboss1995/ritmex-bot.git
 cd ritmex-bot
 ```
 
 ### 方式 B：下载压缩包
-1. 打开仓库页面：<https://github.com/discountry/ritmex-bot>
+1. 打开仓库页面：<https://github.com/andyboss1995/ritmex-bot>
 2. 点击绿色的 `Code` → `Download ZIP`
 3. 解压到易于找到的路径，例如：
    - Windows：`C:\Users\你的用户名\Desktop\ritmex-bot`

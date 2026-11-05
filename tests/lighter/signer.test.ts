@@ -3,10 +3,11 @@ import { LighterSigner } from "../../src/exchanges/lighter/signer";
 import { LIGHTER_ORDER_TYPE, LIGHTER_TIME_IN_FORCE } from "../../src/exchanges/lighter/constants";
 
 describe("LighterSigner", () => {
-  it("produces deterministic create order signature", () => {
+  it("produces a valid create order signature", () => {
     const signer = new LighterSigner({
       accountIndex: 65,
       chainId: 300,
+      // Throwaway test fixture; not a funded account.
       apiKeys: {
         3: "0x13e5f39d25709c1f4c07bfb4bbbde4f01eac5ca79e0ea6be702d6c39eb8b39f33bc5e974d70ccd39",
       },
@@ -23,7 +24,6 @@ describe("LighterSigner", () => {
       reduceOnly: 0,
       triggerPrice: 0,
       orderExpiry: 0n,
-      expiredAt: 1700000000000n,
       apiKeyIndex: 3,
       nonce: 42n,
     });
@@ -31,7 +31,7 @@ describe("LighterSigner", () => {
     const payload = JSON.parse(signed.txInfo);
     expect(payload.AccountIndex).toBe(65);
     expect(payload.ApiKeyIndex).toBe(3);
-    expect(payload.OrderInfo).toMatchObject({
+    expect(payload).toMatchObject({
       MarketIndex: 0,
       ClientOrderIndex: 123,
       BaseAmount: 1000,

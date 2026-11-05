@@ -3,7 +3,7 @@ import { LighterSigner } from "../../src/exchanges/lighter/signer";
 import { LIGHTER_ORDER_TYPE, LIGHTER_TIME_IN_FORCE } from "../../src/exchanges/lighter/constants";
 
 describe("LighterSigner", () => {
-  it("produces a valid create order signature", () => {
+  it("produces a valid create order signature", async () => {
     const signer = new LighterSigner({
       accountIndex: 65,
       chainId: 300,
@@ -13,7 +13,7 @@ describe("LighterSigner", () => {
       },
     });
 
-    const signed = signer.signCreateOrder({
+    const signed = await signer.signCreateOrder({
       marketIndex: 0,
       clientOrderIndex: 123n,
       baseAmount: 1000n,

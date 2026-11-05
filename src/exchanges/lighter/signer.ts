@@ -49,6 +49,7 @@ export interface SignedTxPayload {
 type PendingResolver = {
   resolve: (value: any) => void;
   reject: (error: Error) => void;
+  raw?: boolean;
 };
 
 class PythonSignerBridge {
@@ -100,7 +101,7 @@ class PythonSignerBridge {
       pending.reject(new Error(String(error)));
       return;
     }
-    pending.resolve(payload.result ?? null);
+    pending.resolve(pending.raw ? payload : (payload.result ?? null));
   }
 
   private rejectAll(error: Error): void {
@@ -110,14 +111,14 @@ class PythonSignerBridge {
     this.pending.clear();
   }
 
-  async call(method: string, params: Record<string, unknown>): Promise<any> {
+  async call(method: string, params: Record<string, unknown>, raw = false): Promise<any> {
     const id = ++this.seq;
     const payload = JSON.stringify({ id, method, params }, (_key, value) => {
       if (typeof value === "bigint") return value.toString();
       return value;
     });
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { resolve, reject, raw });
       this.child.stdin.write(payload + "\n", (err) => {
         if (err) {
           this.pending.delete(id);
@@ -181,7 +182,7 @@ export class LighterSigner {
     await this.ensureReady();
     const apiKeyIndex = params.apiKeyIndex ?? this.defaultKeyIndex;
 
-    const result = await this.bridge.call("sign_create_order", {
+    const response = await this.bridge.call("sign_create_order", {
       apiKeyIndex,
       marketIndex: params.marketIndex,
       clientOrderIndex: params.clientOrderIndex.toString(),
@@ -195,15 +196,15 @@ export class LighterSigner {
       orderExpiry: params.orderExpiry.toString(),
       nonce: params.nonce.toString(),
       accountIndex: this.accountIndex.toString(),
-    });
+    }, true);
 
-    const txInfo = String(result);
+    const txInfo = String(response?.result ?? "");
     let signature: string | undefined;
-    let txHash: string | undefined;
+    let txHash: string | undefined = typeof response?.txHash === "string" ? response.txHash : undefined;
     try {
       const parsed = JSON.parse(txInfo);
       if (typeof parsed?.Sig === "string") signature = parsed.Sig;
-      if (typeof parsed?.SignedHash === "string") txHash = parsed.SignedHash;
+      if (!txHash && typeof parsed?.SignedHash === "string") txHash = parsed.SignedHash;
     } catch {
       // ignore parsing errors – txInfo still valid for sendTx
     }
